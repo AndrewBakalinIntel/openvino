@@ -24,6 +24,7 @@ size_t GetIRVersion(std::istream& model) {
 
     model.seekg(0, model.beg);
     model.read(header.data(), header.size());
+    model.clear();
     model.seekg(0, model.beg);
 
     pugi::xml_document doc;
