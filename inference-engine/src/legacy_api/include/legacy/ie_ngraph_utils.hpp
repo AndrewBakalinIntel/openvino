@@ -94,6 +94,7 @@ inline Precision convertPrecision(const ::ngraph::element::Type& precision) {
     case ::ngraph::element::Type_t::f16:
         return Precision(Precision::FP16);
     case ::ngraph::element::Type_t::f32:
+    case ::ngraph::element::Type_t::f64:
         return Precision(Precision::FP32);
     case ::ngraph::element::Type_t::bf16:
         return Precision(Precision::BF16);
