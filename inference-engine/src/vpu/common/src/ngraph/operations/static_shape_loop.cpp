@@ -45,14 +45,11 @@ void StaticShapeLoop::validate_and_infer_types() {
     }
 }
 
-<<<<<<< HEAD
 bool StaticShapeLoop::visit_attributes(AttributeVisitor& visitor) {
     Loop::visit_attributes(visitor);
     return true;
 }
 
-=======
->>>>>>> 4aa9e88f9... [IE][VPU][nGraph]: Introduces StaticShapeLoop
 }  // namespace op
 }  // namespace vpu
 }  // namespace ngraph

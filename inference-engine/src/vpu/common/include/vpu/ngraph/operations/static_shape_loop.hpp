@@ -14,10 +14,7 @@ public:
 
     explicit StaticShapeLoop(const Loop& loop);
     void validate_and_infer_types() override;
-<<<<<<< HEAD
     bool visit_attributes(AttributeVisitor&) override;
-=======
->>>>>>> 4aa9e88f9... [IE][VPU][nGraph]: Introduces StaticShapeLoop
 };
 
 }  // namespace op
