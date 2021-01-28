@@ -291,7 +291,7 @@ static void getBINFiles(std::vector<std::string> &out, const std::string &direct
     closedir(dir);
 }
 
-int num_requests = 4;
+int num_requests = 1;
 
 #define MIN_ITER 1
 
@@ -322,7 +322,7 @@ int process(const std::string& modelFileName, const std::string& inputsDir,
     num_requests = num_requests * num_networks;
 
     // add some more requests. they'll be excluded on performance measurement
-    niter += 2 * 2 * num_requests;
+//    niter += 2 * 2 * num_requests;
 
 #if !(defined(_WIN32) || defined(_WIN64))
     if (pthread_setname_np(
@@ -373,7 +373,7 @@ int process(const std::string& modelFileName, const std::string& inputsDir,
         // HARD-CODE: for mask rcnn onnx model input shape
         if (ng_function->get_parameters().size() != 1)
             throw std::logic_error("unexpected Parameters number in ONNX model file " + modelFileName);
-        ng_function->get_parameters()[0]->set_partial_shape({3, 800, 1088});
+        ng_function->get_parameters()[0]->set_partial_shape({1, 3, 800, 1216});
         // END OF HARD-CODE
         cnnNetwork = InferenceEngine::CNNNetwork(ng_function);
     } else {
@@ -434,7 +434,6 @@ int process(const std::string& modelFileName, const std::string& inputsDir,
             InferenceEngine::Blob::Ptr inputBlob;
             IECALL(request[r]->GetBlob(input.first.c_str(), inputBlob, &resp));
 
-            const auto& dims = inputBlob->getTensorDesc().getDims();
             auto layout = inputBlob->getTensorDesc().getLayout();
 
             // number of channels is 3 for Image, dims order is always NCHW
