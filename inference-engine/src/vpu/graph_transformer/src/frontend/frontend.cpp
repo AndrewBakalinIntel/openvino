@@ -47,6 +47,7 @@
 #include <legacy/transformations/convert_opset1_to_legacy/convert_strided_slice_to_crop.hpp>
 #include <vpu/ngraph/transformations/extract_dynamic_batch/extract_dynamic_batch.hpp>
 #include <vpu/ngraph/transformations/merge_gather_gather_elements.hpp>
+#include <ngraph/pass/visualize_tree.hpp>
 
 namespace vpu {
 
@@ -203,6 +204,8 @@ ie::CNNNetwork FrontEnd::convertNetwork(ie::CNNNetwork& network) {
                               ngraph::pass::ConvertStridedSliceToCropMatcher>(transformationPredicate);
 
     manager.run_passes(nGraphFunc);
+
+    ngraph::pass::VisualizeTree("/home/abakalin/work/temp/gge_after_dts.svg").run_on_function(nGraphFunc);
 
     return ie::CNNNetwork(ie::details::convertFunctionToICNNNetwork(nGraphFunc, network));
 }

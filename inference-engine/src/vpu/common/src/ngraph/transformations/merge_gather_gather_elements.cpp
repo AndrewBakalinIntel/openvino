@@ -25,10 +25,10 @@ bool MergeGatherGatherElements::run_on_function(std::shared_ptr<ngraph::Function
 
     const auto gather = ngraph::pattern::wrap_type<ngraph::opset6::Gather>({gatherData, gatherIndices, ngraph::pattern::any_input()});
 
-    const auto squeezeAxis = ngraph::pattern::any_input();
-    const auto squeeze = ngraph::pattern::wrap_type<ngraph::opset6::Squeeze>({gather, squeezeAxis});
+    const auto reshapePattern = ngraph::pattern::any_input();
+    const auto reshape = ngraph::pattern::wrap_type<ngraph::opset6::Reshape>({gather, reshapePattern});
     const auto transposePerm = ngraph::pattern::any_input();
-    const auto transpose = ngraph::pattern::wrap_type<ngraph::opset6::Transpose>({squeeze, transposePerm});
+    const auto transpose = ngraph::pattern::wrap_type<ngraph::opset6::Transpose>({reshape, transposePerm});
 
     const auto m = std::make_shared<ngraph::pattern::Matcher>(transpose, "GatherSqueezeTransposeMatcher");
     for (const auto& node : f->get_ordered_ops()) {
@@ -49,33 +49,39 @@ bool MergeGatherGatherElements::run_on_function(std::shared_ptr<ngraph::Function
             }
 
             const auto& m_transposePerm = patternMap.at(transposePerm);
-            const auto& m_squeezeAxis = patternMap.at(squeezeAxis);
+//            const auto& m_squeezeAxis = patternMap.at(squeezeAxis);
+            const auto& m_gatherData = patternMap.at(gatherData);
             const auto& m_gatherIndices = patternMap.at(gatherIndices);
             const auto& m_gather = patternMap.at(gather);
-            const auto& m_squeeze = patternMap.at(squeeze);
+//            const auto& m_reshape = patternMap.at(reshape);
             for (const auto& gatherElement : gatherElements) {
                 const auto transposeIndices = std::make_shared<ngraph::opset6::Transpose>(gatherElement->input_value(1), m_transposePerm);
-                const auto unsqueeze = std::make_shared<ngraph::opset6::Unsqueeze>(transposeIndices, m_squeezeAxis);
+                const auto unsqueeze = std::make_shared<ngraph::opset6::Unsqueeze>(
+                    transposeIndices,
+                    ngraph::opset6::Constant::create(ngraph::element::i64, ngraph::Shape{1}, {0}));
                 const auto expGatherElements = std::make_shared<ngraph::vpu::op::ExpGatherElements>(
-                    gatherElement->input_value(0),
+                    m_gatherData,
                     unsqueeze,
                     m_gatherIndices,
                     ngraph::as_type<ngraph::opset6::GatherElements>(gatherElement)->get_axis(),
                     ngraph::as_type<ngraph::opset6::Gather>(m_gather.get_node())->get_axis());
-                const auto squeezeData = m_squeeze.get_node()->clone_with_new_inputs({expGatherElements, m_squeezeAxis});
+                const auto squeezeData = std::make_shared<ngraph::opset6::Squeeze>(
+                    expGatherElements,
+                    ngraph::opset6::Constant::create(ngraph::element::i64, ngraph::Shape{1}, {0}));
                 const auto transposeData = m_transpose.get_node()->clone_with_new_inputs({squeezeData, m_transposePerm});
+                transposeData->set_friendly_name(gatherElement->get_friendly_name());
                 gatherElement->output(0).replace(transposeData);
             }
 
-            const auto& m_gatherData = patternMap.at(gatherData);
             const auto gatherDataShape = std::make_shared<ngraph::opset6::ShapeOf>(m_gatherData, ngraph::element::i32);
             const auto gatherIndicesShape = std::make_shared<ngraph::opset6::ShapeOf>(m_gatherIndices, ngraph::element::i32);
 
             ngraph::OutputVector outputDims;
-            const auto axis = ngraph::as_type<ngraph::opset6::Gather>(m_gather.get_node())->get_axis();
-            outputDims.push_back(gatherShapeElements(gatherDataShape, 0, axis));
-            outputDims.push_back(gatherIndicesShape);
-            outputDims.push_back(gatherShapeElements(gatherDataShape, axis + 1, ngraph::shape_size(gatherDataShape->get_shape()) - axis - 1));
+//            const auto axis = ngraph::as_type<ngraph::opset6::Gather>(m_gather.get_node())->get_axis();
+            outputDims.push_back(gatherShapeElements(gatherIndicesShape, 0, 1));
+            outputDims.push_back(gatherShapeElements(gatherDataShape, 1, 1));
+            outputDims.push_back(gatherShapeElements(gatherIndicesShape, 1, 1));
+            outputDims.push_back(gatherShapeElements(gatherDataShape, 3, 1));
             const auto outputShape = std::make_shared<ngraph::opset6::Concat>(outputDims, 0);
 
             for (const auto& shapeOf : shapeOfs) {

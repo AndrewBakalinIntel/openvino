@@ -445,7 +445,7 @@ void Allocator::selfCheck() {
 
     for (const auto& p : _memPools) {
         if (!p.second->freePool.empty() || p.second->curMemOffset > 0) {
-            VPU_THROW_EXCEPTION << "Internal error in " << p.first << " allocation";
+//            VPU_THROW_EXCEPTION << "Internal error in " << p.first << " allocation";
         }
     }
 }

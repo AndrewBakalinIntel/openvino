@@ -187,7 +187,7 @@ namespace reshapeop
 
             bool backward_compatible_check =
                 (zero_dims && reshape_node->get_special_zero()) || minus_one_idx != -1;
-            bool in_out_elements_equal = shape_size(reshape_node->get_input_shape(0)) ==
+            bool in_out_elements_equal = shape_size(input_pshape.to_shape()) ==
                                          shape_size(output_pshape.to_shape());
 
             NODE_VALIDATION_CHECK(reshape_node,

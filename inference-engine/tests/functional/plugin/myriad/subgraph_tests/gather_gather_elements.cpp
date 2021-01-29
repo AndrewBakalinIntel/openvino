@@ -12,7 +12,9 @@ using namespace LayerTestsUtils::vpu;
 
 class Gather_GatherElements : public testing::WithParamInterface<std::string>,
                               public DSR_TestsCommon {
-    std::shared_ptr<ngraph::Node> createTestedOp() override {
+    void SetUp() override {
+        SetRefMode(LayerTestsUtils::RefMode::INTERPRETER);
+
         targetDevice = GetParam();
 
         const auto imageParam = createParameter(ngraph::element::f32, ngraph::Shape{1, 3, 800, 1216});
@@ -21,11 +23,12 @@ class Gather_GatherElements : public testing::WithParamInterface<std::string>,
             imageParam,
             imageGatherIndices,
             ngraph::opset6::Constant::create(ngraph::element::i32, ngraph::Shape{}, {2}));
-        const auto squeeze = std::make_shared<ngraph::opset6::Squeeze>(
+        const auto reshape = std::make_shared<ngraph::opset6::Reshape>(
             imageGather,
-            ngraph::opset6::Constant::create(ngraph::element::i32, ngraph::Shape{}, {0}));
+            ngraph::opset6::Constant::create(ngraph::element::i32, ngraph::Shape{4}, {3, -1, 64, 1216}),
+            false);
         const auto transpose = std::make_shared<ngraph::opset6::Transpose>(
-            squeeze,
+                reshape,
             ngraph::opset6::Constant::create(ngraph::element::i32, ngraph::Shape{4}, {1, 0, 2, 3}));
 
         const auto shapeOf1 = std::make_shared<ngraph::opset6::ShapeOf>(transpose, ngraph::element::i32);
@@ -120,24 +123,13 @@ class Gather_GatherElements : public testing::WithParamInterface<std::string>,
         const auto gatherElements1 = std::make_shared<ngraph::opset6::GatherElements>(transpose, broadcast1, 3);
         const auto gatherElements2 = std::make_shared<ngraph::opset6::GatherElements>(transpose, broadcast2, 3);
 
-        return std::make_shared<ngraph::opset6::Concat>(ngraph::NodeVector{gatherElements1, gatherElements2}, 0);
-    }
-
-    void SetUp() override {
-        SetRefMode(LayerTestsUtils::RefMode::INTERPRETER);
-
-        const auto testedOp = createTestedOp();
-        ngraph::ResultVector results{};
-        for (const auto& output : testedOp->outputs()) {
-            results.emplace_back(std::make_shared<ngraph::opset3::Result>(output));
-        }
-        results.insert(results.end(), m_additionalResults.begin(), m_additionalResults.end());
-
         function = std::make_shared<ngraph::Function>(
-                results,
-                m_parameterVector,
-                "DSR-" + std::string(testedOp->get_type_name()));
+            ngraph::OutputVector{gatherElements1->output(0), gatherElements2->output(0)},
+            m_parameterVector,
+            "GatherGatherElements");
     }
+
+    std::shared_ptr<ngraph::Node> createTestedOp() override { return nullptr;}
 };
 
 TEST_P(Gather_GatherElements, CompareWithReference) {
