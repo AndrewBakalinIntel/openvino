@@ -23,12 +23,11 @@ class Gather_GatherElements : public testing::WithParamInterface<std::string>,
             imageParam,
             imageGatherIndices,
             ngraph::opset6::Constant::create(ngraph::element::i32, ngraph::Shape{}, {2}));
-        const auto reshape = std::make_shared<ngraph::opset6::Reshape>(
+        const auto squeeze = std::make_shared<ngraph::opset6::Squeeze>(
             imageGather,
-            ngraph::opset6::Constant::create(ngraph::element::i32, ngraph::Shape{4}, {3, -1, 64, 1216}),
-            false);
+            ngraph::opset6::Constant::create(ngraph::element::i32, ngraph::Shape{1}, {0}));
         const auto transpose = std::make_shared<ngraph::opset6::Transpose>(
-                reshape,
+                squeeze,
             ngraph::opset6::Constant::create(ngraph::element::i32, ngraph::Shape{4}, {1, 0, 2, 3}));
 
         const auto shapeOf1 = std::make_shared<ngraph::opset6::ShapeOf>(transpose, ngraph::element::i32);
